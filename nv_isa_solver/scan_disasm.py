@@ -4,8 +4,8 @@ Scan a dissassembly file to add to the corpus.
 `cuobjdump --dump-sass --gpu-architecture sm_90 file`
 """
 
-from .parser import InstructionParser
-from .disasm_utils import Disassembler, get_bit_range
+from nv_isa_solver.parser import InstructionParser
+from nv_isa_solver.disasm_utils import Disassembler, get_bit_range
 
 import argparse
 from argparse import ArgumentParser
@@ -71,8 +71,8 @@ def main():
 
         inst = to_bytes(prev, line_dump)
         if process_instruction(asm, inst):
-            print("Distilling", asm)
-            disassembler.distill_instruction(inst)
+            distilled_inst = disassembler.distill_instruction(inst)
+            print("Distilling", asm, "->", distilled_inst)
 
     print("Found", len(uncached), "instructions")
 

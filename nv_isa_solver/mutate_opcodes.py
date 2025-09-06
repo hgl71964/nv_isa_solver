@@ -2,7 +2,7 @@
 Simple utility to mutate known opcodes with known rest of instructions.
 """
 
-from .disasm_utils import Disassembler
+from nv_isa_solver.disasm_utils import Disassembler
 
 from argparse import ArgumentParser
 

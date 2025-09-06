@@ -7,11 +7,11 @@ from argparse import ArgumentParser
 import traceback
 import os
 
-from .disasm_utils import Disassembler, set_bit_range, get_bit_range
-from . import table_utils
-from . import parser
-from .parser import InstructionParser, Instruction
-from .life_range import analyse_live_ranges, get_interaction_ranges, InteractionType
+from nv_isa_solver.disasm_utils import Disassembler, set_bit_range, get_bit_range
+from nv_isa_solver import table_utils
+from nv_isa_solver import parser
+from nv_isa_solver.parser import InstructionParser, Instruction
+from nv_isa_solver.life_range import analyse_live_ranges, get_interaction_ranges, InteractionType
 
 operand_colors = [
     "#FE8386",
