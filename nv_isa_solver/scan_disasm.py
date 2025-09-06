@@ -11,6 +11,15 @@ import argparse
 from argparse import ArgumentParser
 
 
+def to_bytes(first, second):
+    first = first.strip()
+    second = second.strip()
+
+    def reverse_(a):
+        return "".join(reversed([a[i : i + 2] for i in range(0, len(a), 2)]))
+
+    return bytes.fromhex(reverse_(first[2:]) + reverse_(second[2:]))
+
 def main():
     arg_parser = ArgumentParser()
     arg_parser.add_argument("--arch", default="SM90a")
@@ -22,11 +31,13 @@ def main():
 
     disassembler = Disassembler(arguments.arch, nvdisasm=arguments.nvdisasm)
     disassembler.load_cache(arguments.cache_file)
+    print(f'Cache size: {len(disassembler.cache)}')
 
     instructions = disassembler.find_uniques_from_cache()
     uncached = set()
 
     def process_instruction(disasm, instbytes):
+        nonlocal instructions, uncached
         try:
             parsed = InstructionParser.parseInstruction(disasm)
         except Exception:
@@ -39,15 +50,6 @@ def main():
             uncached.add(key)
             return True
         return False
-
-    def to_bytes(first, second):
-        first = first.strip()
-        second = second.strip()
-
-        def reverse_(a):
-            return "".join(reversed([a[i : i + 2] for i in range(0, len(a), 2)]))
-
-        return bytes.fromhex(reverse_(first[2:]) + reverse_(second[2:]))
 
     prev = None
     asm = None
@@ -75,7 +77,7 @@ def main():
             print("Distilling", asm, "->", distilled_inst)
 
     print("Found", len(uncached), "instructions")
-
+    print(f'Cache size: {len(disassembler.cache)}')
     disassembler.dump_cache(arguments.cache_file)
 
 

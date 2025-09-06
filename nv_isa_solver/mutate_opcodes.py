@@ -15,12 +15,14 @@ def main():
 
     arguments = arg_parser.parse_args()
 
+    # load
     disassembler = Disassembler(arguments.arch, nvdisasm=arguments.nvdisasm)
     disassembler.load_cache(arguments.cache_file)
+    print(f'Cache size: {len(disassembler.cache)}')
 
+    # mutate
     known_opcodes = set()
     known_instruction_seeds = set()
-
     instructions = disassembler.find_uniques_from_cache()
     for key, inst in instructions.items():
         inst = disassembler.distill_instruction(inst)
@@ -38,6 +40,9 @@ def main():
         for seed in known_instruction_seeds:
             insts.append(opcode + seed)
     disassembler.disassemble_parallel(insts)
+
+    # write
+    print(f'Cache size: {len(disassembler.cache)}')
     disassembler.dump_cache(arguments.cache_file)
 
 
