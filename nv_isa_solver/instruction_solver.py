@@ -1421,7 +1421,7 @@ def analysis_run_fixedpoint(
         change = fn(disassembler, mset)
 
 
-def instruction_analysis_pipeline(inst, disassembler, arch_code):
+def instruction_analysis_pipeline(inst, disassembler: Disassembler, arch_code):
     inst = disassembler.distill_instruction(inst)
     asm = disassembler.disassemble(inst)
 
@@ -1504,7 +1504,7 @@ def main():
     )  # is this even correct for SM90a?
     arg_parser.add_argument("--cache_file", default="disasm_cache.txt")
     arg_parser.add_argument("--nvdisasm", default="nvdisasm")
-    arg_parser.add_argument("--num_parallel", default=4, type=int)
+    arg_parser.add_argument("--num_parallel", default=None, type=int)
     arg_parser.add_argument("--filter", default=None, type=str)
 
     arguments = arg_parser.parse_args()
@@ -1512,6 +1512,7 @@ def main():
     disassembler = Disassembler(arguments.arch, nvdisasm=arguments.nvdisasm)
     disassembler.load_cache(arguments.cache_file)
 
+    # Run analysis
     analysis_result = {}
     while True:
         instructions = disassembler.find_uniques_from_cache()
@@ -1529,21 +1530,27 @@ def main():
 
         print("Found", len(instructions), "instructions")
 
-        with futures.ThreadPoolExecutor(max_workers=arguments.num_parallel) as executor:
-            instruction_futures = {}
-            for key, inst in instructions:
-                future = executor.submit(
-                    instruction_analysis_pipeline,
-                    inst,
-                    disassembler,
-                    arguments.arch_code,
-                )
-                instruction_futures[key] = future
+        if arguments.num_parallel is not None and arguments.num_parallel > 1:
+            with futures.ThreadPoolExecutor(max_workers=arguments.num_parallel) as executor:
+                instruction_futures = {}
+                for key, inst in instructions:
+                    future = executor.submit(
+                        instruction_analysis_pipeline,
+                        inst,
+                        disassembler,
+                        arguments.arch_code,
+                    )
+                    instruction_futures[key] = future
 
+                for key, inst in instructions:
+                    spec = instruction_futures[key].result()
+                    analysis_result[key] = spec
+        else:
             for key, inst in instructions:
-                spec = instruction_futures[key].result()
+                spec = instruction_analysis_pipeline(inst, disassembler, arguments.arch_code)
                 analysis_result[key] = spec
 
+    # write
     with open("isa.json", "w") as isa_json_file:
         analysis_serialized = {
             key: spec.to_json_obj() for key, spec in analysis_result.items()

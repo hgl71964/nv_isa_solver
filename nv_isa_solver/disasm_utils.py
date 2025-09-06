@@ -132,6 +132,12 @@ class Disassembler:
         return results
 
     def distill_instruction(self, inst):
+        '''Many instruction encodings contain unused bits or redundant encodings that 
+            disassemble to the same instruction.
+        
+            This function attempts to minimize the instruction encoding while preserving
+            the same disassembly output.
+        '''
         original_asm = self.disassemble(inst)
         original_parsed = InstructionParser.parseInstruction(original_asm)
 
@@ -139,10 +145,14 @@ class Disassembler:
         distilled = bytes(inst)
         for i in range(127, -1, -1):
             inst_ = bytearray(bytes(distilled))
+
+            # If bit i is already 0, skip it.
             if (inst_[i // 8] >> (i % 8)) & 1 == 0:
                 continue
 
             inst_[i // 8] = inst_[i // 8] & ~(1 << (i % 8))
+
+            # if returns nothing, skip
             distill_asm = self.disassemble(inst_)
             if len(distill_asm) == 0:
                 continue
