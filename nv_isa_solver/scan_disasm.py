@@ -14,15 +14,43 @@ import argparse
 from argparse import ArgumentParser
 from tqdm import tqdm
 
+import os
+import concurrent.futures
+from functools import partial
+
 
 def to_bytes(first, second):
     first = first.strip()
     second = second.strip()
 
     def reverse_(a):
-        return "".join(reversed([a[i : i + 2] for i in range(0, len(a), 2)]))
+        return "".join(reversed([a[i:i + 2] for i in range(0, len(a), 2)]))
 
     return bytes.fromhex(reverse_(first[2:]) + reverse_(second[2:]))
+
+
+def process_instruction(
+    disasm,
+    instbytes,
+    original_instructions,
+    new_instructions,
+):
+    # rely on the parser to recognize SASS semantics
+    try:
+        parsed = InstructionParser.parseInstruction(disasm)
+    except Exception:
+        print("Couldn't parse: ", disasm, "skipping", instbytes)
+        return False
+
+    # XXX assume first 12 bits are opcode?
+    opcode = get_bit_range(instbytes, 0, 12)
+    key = f"{opcode}.{parsed.get_key()}"
+    if key not in original_instructions:
+        original_instructions[key] = instbytes
+        new_instructions.add(key)
+        return True
+    return False
+
 
 def main():
     arg_parser = ArgumentParser()
@@ -38,36 +66,17 @@ def main():
     disassembler.load_cache(arguments.cache_file)
     print(f'Cache size: {len(disassembler.cache)}')
 
-    instructions = disassembler.find_uniques_from_cache()
-    uncached = set()
-
-    def process_instruction(disasm, instbytes):
-        nonlocal instructions, uncached
-
-        # rely on the parser to recognize SASS semantics
-        try:
-            parsed = InstructionParser.parseInstruction(disasm)
-        except Exception:
-            print("Couldn't parse", inst)
-            return False
-
-        # XXX assume first 12 bits are opcode?
-        opcode = get_bit_range(instbytes, 0, 12)  
-        key = f"{opcode}.{parsed.get_key()}"
-        if key not in instructions:
-            instructions[key] = instbytes
-            uncached.add(key)
-            return True
-        return False
+    original_instructions = disassembler.find_uniques_from_cache()
+    new_istructions = set()
 
     # parse cuobjdump output
-    # format: 
+    # format:
 
-	#code for sm_100a
-	#.target	sm_100a
+    #code for sm_100a
+    #.target	sm_100a
 
-	#	Function : add_kernel
-	#.headerflags	@"EF_CUDA_SM100 EF_CUDA_VIRTUAL_SM(EF_CUDA_SM100)"
+    #	Function : add_kernel
+    #.headerflags	@"EF_CUDA_SM100 EF_CUDA_VIRTUAL_SM(EF_CUDA_SM100)"
     #    /*0000*/                   LDC R1, c[0x0][0x37c] ;                       /* 0x0000df00ff017b82 */
     #                                                                             /* 0x000e220000000800 */
     #    /*0010*/                   S2R R0, SR_TID.X ;                            /* 0x0000000000007919 */
@@ -80,8 +89,8 @@ def main():
     asm = None
 
     # for i, line in tqdm(enumerate(arguments.file)):
-    progress_bar = tqdm(enumerate(arguments.file), 
-                        desc="Processing SASS", 
+    progress_bar = tqdm(enumerate(arguments.file),
+                        desc="Processing SASS",
                         unit=" lines")
     for i, line in progress_bar:
         line = line.strip()
@@ -92,29 +101,30 @@ def main():
 
         new_asm = None
         if line.count("/*") == 2:
-            line_rest = line[line.find("*/") + 2 :].strip()
-            new_asm = line_rest[: line_rest.find("/*")].strip()[:-1]
+            line_rest = line[line.find("*/") + 2:].strip()
+            new_asm = line_rest[:line_rest.find("/*")].strip()[:-1]
         else:
             line_rest = line
 
-        line_dump = line_rest[line_rest.find("/*") + 2 : line_rest.find("*/")]
+        line_dump = line_rest[line_rest.find("/*") + 2:line_rest.find("*/")]
         if new_asm is not None:
             prev_line_dump = line_dump
             asm = new_asm
             continue
 
         inst = to_bytes(prev_line_dump, line_dump)
-        if process_instruction(asm, inst):
-            distilled_inst = disassembler.distill_instruction(inst)  # will add to cache
-            # print("Distilling: ", asm, "->", distilled_inst)
+        if process_instruction(asm, inst, original_instructions,
+                               new_istructions):
+            distilled_inst = disassembler.distill_instruction(
+                inst)  # will add to cache
             tqdm.write(f"Distilling: {asm} -> {distilled_inst}")
-        
+
+        # TODO change to multiprocessing
         if i > int(arguments.max):
-            # print(f"Reached max line {arguments.max}, stopping")
             tqdm.write(f"Reached max line {arguments.max}, stopping.")
             break
 
-    print("Found", len(uncached), "instructions")
+    print("Found", len(new_istructions), "instructions")
     print(f'Cache size: {len(disassembler.cache)}')
     disassembler.dump_cache(arguments.cache_file)
 

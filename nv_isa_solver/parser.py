@@ -7,7 +7,8 @@ from typing import Union
 import re
 from enum import Enum
 
-p_InsPattern = re.compile(r"(?P<Pred>@!?U?P\w\s+)?\s*(?P<Op>[\w\.\?]+)(?P<Operands>.*)")
+p_InsPattern = re.compile(
+    r"(?P<Pred>@!?U?P\w\s+)?\s*(?P<Op>[\w\.\?]+)(?P<Operands>.*)")
 
 # Pattern for striping modifiers from an operand
 # .*? for non-greedy match, needed for [R0.X4].A
@@ -18,8 +19,7 @@ p_ModifierPattern = re.compile(
 # Match Label+Index (including translated RZ/URZ/PT)
 # SBSet is the score board set for DEPBAR, translated before parsing
 p_IndexedPattern = re.compile(
-    r"\b(?P<RegType>R|UR|P|UP|B|SB|SBSET|SR|gsb)(?P<Index>\d+)$"
-)
+    r"\b(?P<RegType>R|UR|P|UP|B|SB|SBSET|SR|gsb)(?P<Index>\d+)$")
 
 # Pattern for constant memory, some instructions have a mysterious space between two square brackets...
 p_ConstMemType = re.compile(r"c\[(?P<Bank>0x\w+)\]\[(?P<Addr>[+-?\w\.]+)\]")
@@ -28,9 +28,11 @@ p_ConstMemType = re.compile(r"c\[(?P<Bank>0x\w+)\]\[(?P<Addr>[+-?\w\.]+)\]")
 p_AttributeType = re.compile(r"a\[(?P<Addr>[+-?\w\.]+)\]")
 
 # Pattern for constant memory, some instructions have a mysterious space between two square brackets...
-p_URConstMemType = re.compile(r"cx\[(?P<URBank>UR\w+)\]\[(?P<Addr>[+-?\w\.]+)\]")
+p_URConstMemType = re.compile(
+    r"cx\[(?P<URBank>UR\w+)\]\[(?P<Addr>[+-?\w\.]+)\]")
 
-p_DescAddressType = re.compile(r"g?desc\[(?P<URIndex>UR\d+)\](?P<Addr>\[.*\])?$")
+p_DescAddressType = re.compile(
+    r"g?desc\[(?P<URIndex>UR\d+)\](?P<Addr>\[.*\])?$")
 
 # RImmeAddr
 p_RImmeAddr = re.compile(r"(?P<R>R\d+)\s*(?P<II>-?0x[0-9a-fA-F]+)")
@@ -50,45 +52,40 @@ p_ConstTrDict = {
     r"\bQNAN\b": "NAN",
 }
 
-c_AddrFuncs = set(
-    [
-        "BRA",
-        "BRX",
-        "BRXU",
-        "CALL",
-        "JMP",
-        "JMX",
-        "JMXU",
-        "RET",
-        "BSSY",
-        "SSY",
-        "CAL",
-        "PRET",
-        "PBK",
-    ]
-)
+c_AddrFuncs = set([
+    "BRA",
+    "BRX",
+    "BRXU",
+    "CALL",
+    "JMP",
+    "JMX",
+    "JMXU",
+    "RET",
+    "BSSY",
+    "SSY",
+    "CAL",
+    "PRET",
+    "PBK",
+])
 
-
-c_ModiDTypes = set(
-    [
-        "S4",
-        "S8",
-        "S16",
-        "S32",
-        "S64",
-        "U4",
-        "U8",
-        "U16",
-        "U32",
-        "U64",
-        "F16",
-        "F32",
-        "F64",
-    ]
-)
+c_ModiDTypes = set([
+    "S4",
+    "S8",
+    "S16",
+    "S32",
+    "S64",
+    "U4",
+    "U8",
+    "U16",
+    "U32",
+    "U64",
+    "F16",
+    "F32",
+    "F64",
+])
 c_ModiDTypesExt = c_ModiDTypes.union(
-    set(["S24", "U24", "S16H0", "S16H1", "U16H0", "U16H1"])
-)  # IMAD/IMADSP/IMUL(32I)* of sm_6x
+    set(["S24", "U24", "S16H0", "S16H1", "U16H0",
+         "U16H1"]))  # IMAD/IMADSP/IMUL(32I)* of sm_6x
 c_ModiRGBA = set(["R", "G", "B", "A"])  # For TLD4
 c_ModiLOP = set(["AND", "OR", "XOR", "NOT"])  # PSET/PSETP for sm_6x
 
@@ -153,6 +150,7 @@ class OperandType(str, Enum):
 
 
 class Operand:
+
     def __init__(self, sub_operands=None, modifiers=None):
         self.sub_operands = sub_operands if sub_operands else []
         self.parent = None
@@ -204,6 +202,7 @@ class Operand:
 
 
 class RegOperand(Operand):
+
     def __init__(self, reg_type, ident, modifiers=None):
         super().__init__(modifiers=modifiers)
         self.reg_type = reg_type
@@ -232,12 +231,13 @@ class RegOperand(Operand):
 
     @classmethod
     def from_json_obj(cls, obj):
-        return cls(
-            reg_type=obj["reg_type"], ident=obj["ident"], modifiers=obj["modifiers"]
-        )
+        return cls(reg_type=obj["reg_type"],
+                   ident=obj["ident"],
+                   modifiers=obj["modifiers"])
 
 
 class AttributeOperand(Operand):
+
     def __init__(self, address, modifiers=None):
         super().__init__([address], modifiers=modifiers)
 
@@ -256,12 +256,12 @@ class AttributeOperand(Operand):
 
     @classmethod
     def from_json_obj(cls, obj):
-        return cls(
-            Operand.from_json_obj(obj["sub_operands"][0]), modifiers=obj["modifiers"]
-        )
+        return cls(Operand.from_json_obj(obj["sub_operands"][0]),
+                   modifiers=obj["modifiers"])
 
 
 class AddressOperand(Operand):
+
     def __init__(self, operands, modifiers=None):
         super().__init__(operands, modifiers=modifiers)
 
@@ -287,11 +287,14 @@ class AddressOperand(Operand):
 
     @classmethod
     def from_json_obj(cls, obj):
-        sub_operands = [Operand.from_json_obj(op) for op in obj["sub_operands"]]
+        sub_operands = [
+            Operand.from_json_obj(op) for op in obj["sub_operands"]
+        ]
         return cls(sub_operands, modifiers=obj["modifiers"])
 
 
 class IntIMMOperand(Operand):
+
     def __init__(self, constant):
         super().__init__()
         self.constant = constant
@@ -314,6 +317,7 @@ class IntIMMOperand(Operand):
 
 
 class FloatIMMOperand(Operand):
+
     def __init__(self, constant: str):
         super().__init__()
         self.constant = constant
@@ -336,6 +340,7 @@ class FloatIMMOperand(Operand):
 
 
 class ConstantMemOperand(Operand):
+
     def __init__(self, bank, address, cx=False, modifiers=None):
         super().__init__([bank, address], modifiers=modifiers)
         self.cx = cx
@@ -365,8 +370,10 @@ class ConstantMemOperand(Operand):
 
 
 class DescOperand(Operand):
+
     def __init__(self, bank, address=None, g=False, modifiers=None):
-        super().__init__([bank] + ([address] if address else []), modifiers=modifiers)
+        super().__init__([bank] + ([address] if address else []),
+                         modifiers=modifiers)
         self.g = g
 
     def get_operand_key(self):
@@ -379,8 +386,8 @@ class DescOperand(Operand):
     def __repr__(self):
         prefix = "g" if self.g else ""
         return (
-            prefix + f"desc[{repr(self.sub_operands[0])}]{repr(self.sub_operands[1])}"
-        )
+            prefix +
+            f"desc[{repr(self.sub_operands[0])}]{repr(self.sub_operands[1])}")
 
     def to_json_obj(self):
         return {
@@ -401,6 +408,7 @@ class DescOperand(Operand):
 
 
 class Instruction:
+
     def __init__(self, base_name, modifiers, predicate, operands):
         self.base_name = base_name
         self.modifiers = modifiers
@@ -408,9 +416,8 @@ class Instruction:
         self.operands = operands
 
     def get_key(self):
-        return "_".join(
-            [self.base_name] + [op.get_operand_key() for op in self.operands]
-        )
+        return "_".join([self.base_name] +
+                        [op.get_operand_key() for op in self.operands])
 
     def __repr__(self):
         return f"{self.predicate} {self.base_name} {repr(self.modifiers)} {repr(self.operands)[1:-1]}"
@@ -437,7 +444,8 @@ class Instruction:
     @classmethod
     def from_json_obj(cls, obj):
         operands = [Operand.from_json_obj(op) for op in obj["operands"]]
-        return cls(obj["base_name"], obj["modifiers"], obj["predicate"], operands)
+        return cls(obj["base_name"], obj["modifiers"], obj["predicate"],
+                   operands)
 
     @classmethod
     def from_json(cls, jstr):
@@ -451,18 +459,17 @@ def stripComments(s):
     """
 
     s = p_cppcomment.subn(" ", s)[
-        0
-    ]  # replace comments as a single space, avoid unwanted concatination
+        0]  # replace comments as a single space, avoid unwanted concatination
     s = p_ccomment.subn(" ", s)[0]
     s = p_bracomment.subn(" ", s)[0]
-    s = re.subn(r"\s+", " ", s)[
-        0
-    ]  # replace one or more spaces/tabs into one single space
+    s = re.subn(r"\s+", " ",
+                s)[0]  # replace one or more spaces/tabs into one single space
 
     return s.strip()
 
 
 class _InstructionParser:
+
     def parseOperandAtom(self, operand):
         match = p_ModifierPattern.match(operand)  # split token to three parts
         if match is None:
@@ -543,9 +550,8 @@ class _InstructionParser:
         """
 
         # Split sub operands.
-        ss = re.sub(
-            r"(?<![\[\+])-0x", "+-0x", s
-        )  # NOTE: [R0-0x100] is illegal! should be [R0+-0x100]
+        ss = re.sub(r"(?<![\[\+])-0x", "+-0x",
+                    s)  # NOTE: [R0-0x100] is illegal! should be [R0+-0x100]
         ss = ss.strip("[]").split("+")
 
         operands = []
@@ -591,9 +597,7 @@ class _InstructionParser:
             return self._parseFloatIMM(op_full)
         elif op.startswith("desc") or op.startswith("gdesc"):
             return self._parseDescAddress(op)
-        elif (
-            op
-            in [
+        elif (op in [
                 "COMP_STATUS",
                 "ATEXIT_PC",
                 "TRAP_RETURN_PC",
@@ -604,10 +608,7 @@ class _InstructionParser:
                 "TRA_RETURN_MASK",
                 "CUBE",
                 "OPT_STACK",
-            ]
-            or op.startswith("???")
-            or op.startswith("INVALID")
-        ):
+        ] or op.startswith("???") or op.startswith("INVALID")):
             result = RegOperand("SNOWFLAKE", op)
         elif op.startswith("TEX_"):
             result = RegOperand("TEX", op[4:])
@@ -659,8 +660,8 @@ class _InstructionParser:
             res = p_RImmeAddr.search(operands)
             if res is not None:
                 operands = operands.replace(
-                    res.group(), res.group("R") + "," + res.group("II")
-                )
+                    res.group(),
+                    res.group("R") + "," + res.group("II"))
 
         # FIXME: This won't handle the DEPBAR instruction.
         operands = operands.split(",")

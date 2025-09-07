@@ -18,12 +18,13 @@ def main():
     # XXX it seems to assume the first 12 bits are the opcode
     inst = []
     for i in range(pow(2, 12)):
-        array = bytearray(b"\0" * 16)   # 16-byte buffer (128 bits instruction length, all 0)
+        array = bytearray(
+            b"\0" * 16)  # 16-byte buffer (128 bits instruction length, all 0)
         set_bit_range(array, 0, 12, i)  # write i into the lowest 12 bits
         inst.append(array)
-        for j in range(13, 8 * 13):     # j = 13..103
+        for j in range(13, 8 * 13):  # j = 13..103
             array_ = bytearray(array)
-            flip_bit(array_, j)         # flip one extra bit
+            flip_bit(array_, j)  # flip one extra bit
             inst.append(array_)
 
     disassembler.disassemble_parallel(inst, True)

@@ -50,6 +50,7 @@ class EncodingRangeType(str, Enum):
 
 
 class EncodingRange:
+
     def __init__(
         self,
         type,
@@ -88,6 +89,7 @@ class EncodingRange:
 
 
 class EncodingRanges:
+
     def __init__(
         self,
         ranges,
@@ -176,16 +178,13 @@ class EncodingRanges:
             elif rng.type == EncodingRangeType.FLAG:
                 if rng.name in flags:
                     value = 1
-            elif (
-                rng.type == EncodingRangeType.OPERAND_MODIFIER
-                and rng.operand_index in operand_modifiers
-            ):
+            elif (rng.type == EncodingRangeType.OPERAND_MODIFIER
+                  and rng.operand_index in operand_modifiers):
                 value = operand_modifiers[rng.operand_index]
-            elif (
-                rng.type == EncodingRangeType.OPERAND_FLAG
-                and rng.operand_index in operand_flags
-            ):
-                value = 1 if rng.name in operand_flags[rng.operand_index] else 0
+            elif (rng.type == EncodingRangeType.OPERAND_FLAG
+                  and rng.operand_index in operand_flags):
+                value = 1 if rng.name in operand_flags[
+                    rng.operand_index] else 0
             elif rng.type in range_vals:
                 value = range_vals[rng.type]
 
@@ -220,12 +219,15 @@ class EncodingRanges:
             analysis_result.append([])
 
             try:
-                first_modis = InstructionParser.parseInstruction(disasms[0]).modifiers
-                second_modis = InstructionParser.parseInstruction(disasms[1]).modifiers
+                first_modis = InstructionParser.parseInstruction(
+                    disasms[0]).modifiers
+                second_modis = InstructionParser.parseInstruction(
+                    disasms[1]).modifiers
             except Exception:
                 continue
 
-            first_difference = find_modifier_difference(second_modis, first_modis)
+            first_difference = find_modifier_difference(
+                second_modis, first_modis)
 
             basis = Counter(first_modis)
             for modi in first_difference.split("."):
@@ -236,16 +238,16 @@ class EncodingRanges:
 
             for i, asm in enumerate(disasms):
                 try:
-                    asm_modis = InstructionParser.parseInstruction(asm).modifiers
+                    asm_modis = InstructionParser.parseInstruction(
+                        asm).modifiers
                 except Exception:
                     continue
                 name = basis_find_modifier_difference(basis, asm_modis)
                 # Replace the modifier value if the default value fuzzing found for this modifier is invalid.
-                if (
-                    name.startswith("INVALID") or name.startswith("???")
-                ) and i == get_bit_range(
-                    self.inst, modifier.start, modifier.start + modifier.length
-                ):
+                if (name.startswith("INVALID")
+                        or name.startswith("???")) and i == get_bit_range(
+                            self.inst, modifier.start,
+                            modifier.start + modifier.length):
                     replace_original = True
                 analysis_result[-1].append((i, name))
             if replace_original:
@@ -273,10 +275,9 @@ class EncodingRanges:
                 operand_modis = {}
                 operand_modis[modifier.operand_index] = modi_i
                 insts.append(
-                    self.encode(
-                        operand_values, modi_values, operand_modifiers=operand_modis
-                    )
-                )
+                    self.encode(operand_values,
+                                modi_values,
+                                operand_modifiers=operand_modis))
             disasms = disassembler.disassemble_parallel(insts)
 
             current = []
@@ -285,11 +286,9 @@ class EncodingRanges:
             for i, asm in enumerate(disasms):
                 try:
                     comp_operands = InstructionParser.parseInstruction(
-                        comp
-                    ).get_flat_operands()
+                        comp).get_flat_operands()
                     asm_operands = InstructionParser.parseInstruction(
-                        asm
-                    ).get_flat_operands()
+                        asm).get_flat_operands()
                     name = find_modifier_difference(
                         comp_operands[modifier.operand_index].modifiers,
                         asm_operands[modifier.operand_index].modifiers,
@@ -332,10 +331,8 @@ class EncodingRanges:
                     if erange.group_id:
                         text += f" {erange.group_id}"
 
-            vertical = (
-                erange.type == EncodingRangeType.FLAG
-                or erange.type == EncodingRangeType.OPERAND_FLAG
-            )
+            vertical = (erange.type == EncodingRangeType.FLAG
+                        or erange.type == EncodingRangeType.OPERAND_FLAG)
 
             if erange.type == EncodingRangeType.CONSTANT:
                 text = bin(erange.constant)[2:].zfill(erange.length)[::-1]
@@ -429,6 +426,7 @@ def analyse_modifiers(original: List[str], mutated: List[str]):
 
 
 class InstructionMutationSet:
+
     def __init__(self, inst, parsed_asm: Instruction, mutations, disassembler):
         self.inst = inst
         self.parsed = parsed_asm
@@ -524,7 +522,8 @@ class InstructionMutationSet:
                     self.bit_to_operand[i_bit] = i
                     operand_effected = True
                 else:
-                    effected, flag = analyse_modifiers(b.modifiers, a.modifiers)
+                    effected, flag = analyse_modifiers(b.modifiers,
+                                                       a.modifiers)
                     if effected:
                         self.bit_to_operand[i_bit] = i
                         self.operand_modifier_bits.add(i_bit)
@@ -538,9 +537,8 @@ class InstructionMutationSet:
             # we will consider it a different instruction anways.
             if i_bit > 12:
                 # analyse instruction modifiers.
-                effected, flag = analyse_modifiers(
-                    self.parsed.modifiers, mutated_parsed.modifiers
-                )
+                effected, flag = analyse_modifiers(self.parsed.modifiers,
+                                                   mutated_parsed.modifiers)
                 if effected:
                     self.modifier_bits.add(i_bit)
                 if flag:
@@ -625,28 +623,24 @@ class InstructionMutationSet:
 
                 offset = 13 * 8 + 1
                 for rtype, length in control_code_ranges:
-                    if (
-                        i >= offset
-                        and i < offset + length
-                        and get_bit_range(self.inst, offset, offset + length) == 0
-                    ):
+                    if (i >= offset and i < offset + length and get_bit_range(
+                            self.inst, offset, offset + length) == 0):
                         new_range = EncodingRange(rtype, i, 1)
                         break
                     offset += length
 
             if new_range is None:
-                new_range = EncodingRange(EncodingRangeType.CONSTANT, i, 1, constant=0)
+                new_range = EncodingRange(EncodingRangeType.CONSTANT,
+                                          i,
+                                          1,
+                                          constant=0)
             # Decide if we should extend the current range or not.
-            if (
-                current_range
-                and new_range.type == current_range.type
-                and new_range.operand_index == current_range.operand_index
-                and (new_range.type != EncodingRangeType.CONSTANT or i != 8 * 8)
-                and (
-                    new_range.group_id is None
-                    or new_range.group_id == current_range.group_id
-                )
-            ):
+            if (current_range and new_range.type == current_range.type
+                    and new_range.operand_index == current_range.operand_index
+                    and
+                (new_range.type != EncodingRangeType.CONSTANT or i != 8 * 8)
+                    and (new_range.group_id is None
+                         or new_range.group_id == current_range.group_id)):
                 current_range.length += 1
             else:
                 # Push current range
@@ -654,9 +648,9 @@ class InstructionMutationSet:
                 current_range = new_range
 
             if current_range.type == EncodingRangeType.CONSTANT:
-                current_range.constant |= ((self.inst[i // 8] >> (i % 8)) & 1) << (
-                    current_range.length - 1
-                )
+                current_range.constant |= (
+                    (self.inst[i // 8] >>
+                     (i % 8)) & 1) << (current_range.length - 1)
 
         _push()
 
@@ -668,9 +662,8 @@ def set_bit(array: bytearray, i):
     array[i // 8] ^= 1 << bit_offset
 
 
-def analysis_disambiguate_flags(
-    disassembler: Disassembler, mset: InstructionMutationSet
-) -> bool:
+def analysis_disambiguate_flags(disassembler: Disassembler,
+                                mset: InstructionMutationSet) -> bool:
     """
     Analysis pass to disambiguate flags from modifiers by fliping adjacent bits.
     TODO: Operand modifier/flag disambiguation
@@ -718,9 +711,8 @@ def analysis_disambiguate_flags(
     return changed
 
 
-def analysis_disambiguate_operand_flags(
-    disassembler: Disassembler, mset: InstructionMutationSet
-) -> bool:
+def analysis_disambiguate_operand_flags(disassembler: Disassembler,
+                                        mset: InstructionMutationSet) -> bool:
     modifier_mutations = []
     for bit in mset.operand_modifier_bit_flag:
         inst_ = bytearray(mset.inst)
@@ -751,7 +743,8 @@ def analysis_disambiguate_operand_flags(
         if parsed.get_key() != mset.key:
             continue
         mutated_operands = parsed.get_flat_operands()
-        if flag_name not in mutated_operands[mset.bit_to_operand[bit]].modifiers:
+        if flag_name not in mutated_operands[
+                mset.bit_to_operand[bit]].modifiers:
             changed = True
             del mset.operand_modifier_bit_flag[bit]
             if adj in mset.operand_modifier_bit_flag:
@@ -759,9 +752,8 @@ def analysis_disambiguate_operand_flags(
     return changed
 
 
-def analysis_operand_fix(
-    disassembler: Disassembler, mset: InstructionMutationSet
-) -> bool:
+def analysis_operand_fix(disassembler: Disassembler,
+                         mset: InstructionMutationSet) -> bool:
     """
     With operands like [UR10 + 0x1], a constant IMM of 0 changes the operand
     signature and won't be removed with distillation, causing a discontinuity
@@ -797,9 +789,8 @@ def analysis_operand_fix(
     for i, rng in enumerate(operand_ranges):
         operand = operands[rng.operand_index]
         if not isinstance(operand, parser.Operand) and not (
-            isinstance(operand, parser.IntIMMOperand)
-            and isinstance(operand.parent, parser.AddressOperand)
-        ):
+                isinstance(operand, parser.IntIMMOperand)
+                and isinstance(operand.parent, parser.AddressOperand)):
             continue
         # Not 100% sure about this, what if the bit is between bytes?
         if rng.start % 8 != 0:
@@ -808,9 +799,8 @@ def analysis_operand_fix(
             mutate_test(rng.operand_index, rng.start + rng.length, rng.start)
 
 
-def analysis_extend_modifiers(
-    disassembler: Disassembler, mset: InstructionMutationSet
-) -> bool:
+def analysis_extend_modifiers(disassembler: Disassembler,
+                              mset: InstructionMutationSet) -> bool:
     """
     analysis pass to try to extend modifier fields.
     """
@@ -864,24 +854,19 @@ def analysis_extend_modifiers(
     return changed
 
 
-def analysis_modifier_coalescing(
-    disassembler: Disassembler, mset: InstructionMutationSet
-) -> bool:
+def analysis_modifier_coalescing(disassembler: Disassembler,
+                                 mset: InstructionMutationSet) -> bool:
     changed = False
     ranges = mset.compute_encoding_ranges()
 
     for i, rng in enumerate(ranges.ranges[1:]):
         if rng.length > 2:
             continue
-        if (
-            ranges.ranges[i].type != EncodingRangeType.MODIFIER
-            or rng.type != EncodingRangeType.CONSTANT
-        ):
+        if (ranges.ranges[i].type != EncodingRangeType.MODIFIER
+                or rng.type != EncodingRangeType.CONSTANT):
             continue
-        if (
-            len(ranges.ranges) <= i + 2
-            or ranges.ranges[i + 2].type != EncodingRangeType.MODIFIER
-        ):
+        if (len(ranges.ranges) <= i + 2
+                or ranges.ranges[i + 2].type != EncodingRangeType.MODIFIER):
             continue
         for i in range(rng.start, rng.start + rng.length):
             changed = True
@@ -892,9 +877,8 @@ def analysis_modifier_coalescing(
     return changed
 
 
-def analysis_modifier_splitting(
-    disassembler: Disassembler, mset: InstructionMutationSet
-):
+def analysis_modifier_splitting(disassembler: Disassembler,
+                                mset: InstructionMutationSet):
     """
     Split the modifier if there is independence between modifiers.
     """
@@ -918,26 +902,24 @@ def analysis_modifier_splitting(
         if "" in inst:
             return False
         try:
-            orig, modi, adj = [InstructionParser.parseInstruction(asm) for asm in inst]
+            orig, modi, adj = [
+                InstructionParser.parseInstruction(asm) for asm in inst
+            ]
         except Exception:
             return False
 
         if len(set([orig.get_key(), modi.get_key(), adj.get_key()])) != 1:
             return False
 
-        orig_difference = find_modifier_difference(orig.modifiers, modi.modifiers)
-        if (
-            len(orig_difference) == 0
-            or "." in orig_difference[:-1]
-            or orig_difference.startswith("INVALID")
-        ):
+        orig_difference = find_modifier_difference(orig.modifiers,
+                                                   modi.modifiers)
+        if (len(orig_difference) == 0 or "." in orig_difference[:-1]
+                or orig_difference.startswith("INVALID")):
             return False
         orig_difference = orig_difference[:-1]
-        if (
-            orig_difference in adj.modifiers
-            and adj.modifiers != modi.modifiers
-            and adj.modifiers != orig.modifiers
-        ):
+        if (orig_difference in adj.modifiers
+                and adj.modifiers != modi.modifiers
+                and adj.modifiers != orig.modifiers):
             count_orig = Counter(modi.modifiers)[orig_difference]
             count_adj = Counter(adj.modifiers)[orig_difference]
             return count_orig == count_adj
@@ -949,11 +931,9 @@ def analysis_modifier_splitting(
 
     for rng in modifier_ranges:
         for i in range(1, rng.length):
-            if (
-                analyse_adj(rng.start, rng.start + i)
-                or analyse_adj(rng.start + i - 1, rng.start + i)
-                or analyse_adj(rng.start, rng.start + i)
-            ):
+            if (analyse_adj(rng.start, rng.start + i)
+                    or analyse_adj(rng.start + i - 1, rng.start + i)
+                    or analyse_adj(rng.start, rng.start + i)):
                 split_range(rng, i)
                 return True
 
@@ -979,6 +959,7 @@ INSTRUCTION_DESC_HEADER = """
 
 
 class InstructionDescGenerator:
+
     def generate(self, instruction: Instruction, full_name: str):
         self.result = '<div class="instruction-desc">'
         self.result += f'<span class="base-name">{full_name}</span>'
@@ -1116,7 +1097,8 @@ class InstructionSpec:
                 self.all_modifiers.append((name[:-1], i, value))
 
         self.opcode_modis = self._get_opcode_modis()
-        self.canonical_name = ".".join([self.parsed.base_name] + self.opcode_modis)
+        self.canonical_name = ".".join([self.parsed.base_name] +
+                                       self.opcode_modis)
 
     def to_json_obj(self):
         return {
@@ -1198,8 +1180,7 @@ class InstructionSpec:
                 if i in used_modis:
                     continue
                 modifier_group = [
-                    operand
-                    for operand in modifier_group.split(".")
+                    operand for operand in modifier_group.split(".")
                     if len(operand) != 0
                 ]
                 score = score_match(modifier_group)
@@ -1293,9 +1274,11 @@ class InstructionSpec:
             "UPRED": upredicates,
             "UGPR": uregisters,
         }
-        encoded = self.ranges.encode(
-            operand_values, modifiers, yield_flag=False, read_barrier=0, write_barrier=0
-        )
+        encoded = self.ranges.encode(operand_values,
+                                     modifiers,
+                                     yield_flag=False,
+                                     read_barrier=0,
+                                     write_barrier=0)
         return (reg_files, encoded)
 
     def encode(
@@ -1332,13 +1315,11 @@ class InstructionSpec:
     def analyse_operand_interactions(self, arch_code, nvdisasm):
         try:
             reg_files, encoded = self.encode_for_life_range(
-                self.get_minimal_modifiers()
-            )
+                self.get_minimal_modifiers())
             if encoded is None:
                 return
             interaction_data, self.operand_interaction_raw = analyse_live_ranges(
-                encoded, arch_code, nvdisasm=nvdisasm
-            )
+                encoded, arch_code, nvdisasm=nvdisasm)
             interaction_ranges = get_interaction_ranges(interaction_data)
         except Exception as e:
             print("Couldn't analyse operands", self.disasm, e)
@@ -1348,7 +1329,10 @@ class InstructionSpec:
             return
         result = {}
         for file_name, reg_ranges in interaction_ranges.items():
-            range_to_operand = {begin: opx for opx, begin in reg_files[file_name]}
+            range_to_operand = {
+                begin: opx
+                for opx, begin in reg_files[file_name]
+            }
             result[file_name] = []
             for rng in reg_ranges:
                 if rng[1] == "USED":
@@ -1378,8 +1362,7 @@ class InstructionSpec:
                     op = operands[usg[0]]
                     operand_interactions.append((op, usg[1], usg[2]))
             operand_interactions = sorted(
-                operand_interactions, key=lambda x: x[0].flat_operand_index
-            )
+                operand_interactions, key=lambda x: x[0].flat_operand_index)
 
             for i, operand_int in enumerate(operand_interactions):
                 color = operand_colors[operand_int[0].flat_operand_index]
@@ -1396,25 +1379,26 @@ class InstructionSpec:
         modifier_ranges = self.ranges._find(EncodingRangeType.MODIFIER)
         for i, rows in enumerate(self.modifiers):
             title = f"Modifier Group {i + 1}"
-            html_result += generate_modifier_table(title, rows, modifier_ranges[i])
+            html_result += generate_modifier_table(title, rows,
+                                                   modifier_ranges[i])
 
-        operand_modifier_ranges = self.ranges._find(EncodingRangeType.OPERAND_MODIFIER)
+        operand_modifier_ranges = self.ranges._find(
+            EncodingRangeType.OPERAND_MODIFIER)
         operand_modifier_ranges = {
-            rng.operand_index: rng for rng in operand_modifier_ranges
+            rng.operand_index: rng
+            for rng in operand_modifier_ranges
         }
 
         for operand, modifiers in self.operand_modifiers.items():
             title = f"Operand {operand} operand modifiers"
 
             html_result += generate_modifier_table(
-                title, modifiers, operand_modifier_ranges[operand]
-            )
+                title, modifiers, operand_modifier_ranges[operand])
         return html_result
 
 
-def analysis_run_fixedpoint(
-    disassembler: Disassembler, mset: InstructionMutationSet, fn
-):
+def analysis_run_fixedpoint(disassembler: Disassembler,
+                            mset: InstructionMutationSet, fn):
     change = True
     while change:
         change = fn(disassembler, mset)
@@ -1426,36 +1410,41 @@ def instruction_analysis_pipeline(inst, disassembler: Disassembler, arch_code):
     parsed_inst = InstructionParser.parseInstruction(asm)
 
     mutations = disassembler.mutate_inst(inst, end=14 * 8 - 2)
-    mutation_set = InstructionMutationSet(inst, parsed_inst, mutations, disassembler)
+    mutation_set = InstructionMutationSet(inst, parsed_inst, mutations,
+                                          disassembler)
 
     # run
-    analysis_run_fixedpoint(disassembler, mutation_set, analysis_disambiguate_flags)
+    analysis_run_fixedpoint(disassembler, mutation_set,
+                            analysis_disambiguate_flags)
     analysis_operand_fix(disassembler, mutation_set)
     analysis_disambiguate_operand_flags(disassembler, mutation_set)
-    analysis_run_fixedpoint(disassembler, mutation_set, analysis_extend_modifiers)
+    analysis_run_fixedpoint(disassembler, mutation_set,
+                            analysis_extend_modifiers)
     # analysis_modifier_coalescing(disassembler, mutation_set)
-    analysis_run_fixedpoint(disassembler, mutation_set, analysis_modifier_splitting)
+    analysis_run_fixedpoint(disassembler, mutation_set,
+                            analysis_modifier_splitting)
 
     ranges = mutation_set.compute_encoding_ranges()
     modifier_values = ranges.enumerate_modifiers(disassembler)
     operand_modifier_values = ranges.enumerate_operand_modifiers(disassembler)
 
-    spec = InstructionSpec(
-        asm, parsed_inst, ranges, modifier_values, operand_modifier_values
-    )
+    spec = InstructionSpec(asm, parsed_inst, ranges, modifier_values,
+                           operand_modifier_values)
     spec.analyse_operand_interactions(arch_code, disassembler.nvdisasm)
     return spec
 
 
 class ISASpec:
+
     def __init__(self, instructions):
         self.instructions = instructions
 
     @classmethod
     def from_json_obj(cls, obj):
-        return cls(
-            {key: InstructionSpec.from_json_obj(value) for key, value in obj.items()}
-        )
+        return cls({
+            key: InstructionSpec.from_json_obj(value)
+            for key, value in obj.items()
+        })
 
     @classmethod
     def from_json(cls, json_str):
@@ -1500,9 +1489,8 @@ class ISASpec:
 def main():
     arg_parser = ArgumentParser()
     arg_parser.add_argument("--arch", default="SM90a")
-    arg_parser.add_argument(
-        "--arch_code", default=90, type=int
-    )  # is this even correct for SM90a?
+    arg_parser.add_argument("--arch_code", default=90,
+                            type=int)  # is this even correct for SM90a?
     arg_parser.add_argument("--cache_file", default="disasm_cache.txt")
     arg_parser.add_argument("--nvdisasm", default="nvdisasm")
     arg_parser.add_argument("--num_parallel", default=None, type=int)
@@ -1517,13 +1505,11 @@ def main():
     analysis_result = {}
     while True:
         instructions = disassembler.find_uniques_from_cache()
-        instructions = [
-            (key, inst) for key, inst in instructions.items() if key not in analysis_result
-        ]
+        instructions = [(key, inst) for key, inst in instructions.items()
+                        if key not in analysis_result]
         if arguments.filter:
-            instructions = [
-                (key, inst) for key, inst in instructions if arguments.filter in key
-            ]
+            instructions = [(key, inst) for key, inst in instructions
+                            if arguments.filter in key]
         if len(instructions) == 0:
             print("No new instruction found, exiting")
             break
@@ -1531,7 +1517,8 @@ def main():
         print("Found", len(instructions), "instructions")
 
         if arguments.num_parallel is not None and arguments.num_parallel > 1:
-            with futures.ThreadPoolExecutor(max_workers=arguments.num_parallel) as executor:
+            with futures.ThreadPoolExecutor(
+                    max_workers=arguments.num_parallel) as executor:
                 instruction_futures = {}
                 for key, inst in instructions:
                     future = executor.submit(
@@ -1547,13 +1534,15 @@ def main():
                     analysis_result[key] = spec
         else:
             for key, inst in instructions:
-                spec = instruction_analysis_pipeline(inst, disassembler, arguments.arch_code)
+                spec = instruction_analysis_pipeline(inst, disassembler,
+                                                     arguments.arch_code)
                 analysis_result[key] = spec
 
     # write
     with open("isa.json", "w") as isa_json_file:
         analysis_serialized = {
-            key: spec.to_json_obj() for key, spec in analysis_result.items()
+            key: spec.to_json_obj()
+            for key, spec in analysis_result.items()
         }
         isa_json_file.write(json.dumps(analysis_serialized))
 

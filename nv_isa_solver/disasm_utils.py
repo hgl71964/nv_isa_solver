@@ -11,11 +11,12 @@ def _process_dump(dump):
     lines = dump.split("\n")[1:]
     result = []
     for line in lines:
-        result.append(line[line.find("*/") + 2 :].strip())
+        result.append(line[line.find("*/") + 2:].strip())
     return "\n".join(result).strip()
 
 
 class Disassembler:
+
     def __init__(self, arch, nvdisasm="nvdisasm", batch_size=None):
         self.cache = {}
         self.arch = arch
@@ -68,8 +69,8 @@ class Disassembler:
         tmp.write(inst)
         tmp.close()
         result = subprocess.run(
-            [self.nvdisasm, tmp.name, "--binary", self.arch], capture_output=True
-        )
+            [self.nvdisasm, tmp.name, "--binary", self.arch],
+            capture_output=True)
         os.remove(tmp.name)
         result = _process_dump(result.stdout.decode("ascii"))
         self.cache[inst] = result
@@ -87,7 +88,8 @@ class Disassembler:
                     continue
                 idxes.append(i)
                 new_array.append(inst)
-            uncached_results = self.disassemble_parallel(new_array, disable_cache=True)
+            uncached_results = self.disassemble_parallel(new_array,
+                                                         disable_cache=True)
             # print("Uncached", len(uncached_results), "out of", len(array))
             for i, asm in zip(idxes, uncached_results):
                 result[i] = asm
@@ -96,9 +98,9 @@ class Disassembler:
         if len(array) > self.batch_size:
             result = []
             for i in tqdm.tqdm(range(0, len(array), self.batch_size)):
-                result += self.disassemble_parallel(
-                    array[i : i + self.batch_size], disable_cache=True
-                )
+                result += self.disassemble_parallel(array[i:i +
+                                                          self.batch_size],
+                                                    disable_cache=True)
             assert len(result) == len(array)
             return result
 
@@ -120,7 +122,8 @@ class Disassembler:
 
         results = []
         for process in processes:
-            results.append(_process_dump(process.stdout.read().decode("ascii")))
+            results.append(_process_dump(
+                process.stdout.read().decode("ascii")))
 
         for tmp in tmp_files:
             os.remove(tmp.name)
@@ -158,7 +161,8 @@ class Disassembler:
                 continue
 
             try:
-                distill_parsed = InstructionParser.parseInstruction(distill_asm)
+                distill_parsed = InstructionParser.parseInstruction(
+                    distill_asm)
             except Exception:
                 continue
             if original_parsed.get_key() != distill_parsed.get_key():

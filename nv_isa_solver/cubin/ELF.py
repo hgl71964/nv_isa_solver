@@ -124,20 +124,16 @@ class Header:
     def unpack_binary(self, data):
         self.ident = unpack("16B", data[:16])
         ei_mag0, ei_mag1, ei_mag2, ei_mag3, ei_class, ei_data, ei_version, ei_pad = (
-            self.ident[:8]
-        )
-        if (
-            ei_mag0 != 127
-            or ei_mag1 != ord("E")
-            or ei_mag2 != ord("L")
-            or ei_mag3 != ord("F")
-        ):
+            self.ident[:8])
+        if (ei_mag0 != 127 or ei_mag1 != ord("E") or ei_mag2 != ord("L")
+                or ei_mag3 != ord("F")):
             raise Exception("Not an ELF file.\n")
         if ei_class != 2:
             raise Exception("Not a 64-bit ELF file\n")
 
         self.type, self.machine, self.version = unpack("hhi", data[16:24])
-        self.entry, self.phoff, self.shoff, self.flags = unpack("qqqi", data[24:52])
+        self.entry, self.phoff, self.shoff, self.flags = unpack(
+            "qqqi", data[24:52])
         self.ehsize, self.phentsize, self.phnum = unpack("hhh", data[52:58])
         self.shentsize, self.shnum, self.shstrndx = unpack("hhh", data[58:64])
         arch = self.flags & 0xFF
@@ -145,9 +141,8 @@ class Header:
 
     def PackHeader(self):
         # ELF 64-bit, little endian, version01, ABI33, ABI version7, zero padding
-        self.ident = (
-            b"\x7fELF" + b"\x02" + b"\x01" + b"\x01" + b"\x33" + b"\7" + b"\0" * 7
-        )
+        self.ident = (b"\x7fELF" + b"\x02" + b"\x01" + b"\x01" + b"\x33" +
+                      b"\7" + b"\0" * 7)
         return pack(
             "<16sHHIQQQIHHHHHH",
             self.ident,

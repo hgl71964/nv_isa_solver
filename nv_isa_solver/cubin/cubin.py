@@ -6,6 +6,7 @@ from functools import reduce
 
 
 class Cubin:
+
     def __init__(self, arch=70):
         self.header = Header()
         self.programs = []
@@ -88,11 +89,13 @@ class Cubin:
         # EIATTR_MAX_STACK_SIZE (0x0423)
         kernel_symtab_idx = self.sym_idx_dict[name]  # TODO: Why?
         MAX_STACK_SIZE = 0
-        data += pack("<bbhll", 0x4, 0x23, 0x8, kernel_symtab_idx, MAX_STACK_SIZE)
+        data += pack("<bbhll", 0x4, 0x23, 0x8, kernel_symtab_idx,
+                     MAX_STACK_SIZE)
 
         # EIATTR_MIN_STACK_SIZE (0x0412)
         MIN_STACK_SIZE = 0
-        data += pack("<bbhll", 0x4, 0x12, 0x8, kernel_symtab_idx, MIN_STACK_SIZE)
+        data += pack("<bbhll", 0x4, 0x12, 0x8, kernel_symtab_idx,
+                     MIN_STACK_SIZE)
 
         # EIATTR_FRAME_SIZE (0x0411)
         FRAME_SIZE = 0
@@ -116,7 +119,8 @@ class Cubin:
         size_params = reduce(lambda x, y: x + y, params["size_list"])
         # EIATTR_PARAM_CBANK (0x040a)
         kernel_symtab_idx = self.sym_idx_dict[name]
-        data += pack("<bbhlhh", 0x4, 0x0A, 0x8, kernel_symtab_idx, 0x160, size_params)
+        data += pack("<bbhlhh", 0x4, 0x0A, 0x8, kernel_symtab_idx, 0x160,
+                     size_params)
 
         # EIATTR_CBANK_PARAM_SIZE (0x0319)
         data += pack("<bbH", 0x3, 0x19, size_params)
@@ -126,12 +130,10 @@ class Cubin:
         param_offset = size_params
         for ordinal, param in reversed(list(enumerate(params["size_list"]))):
             param_offset -= param
-            param_flag = (
-                ((param // 4) << 20) + 0x1F000 + 0x000
-            )  # space (4bits) + logAlign (8bits); always 0
-            data += pack(
-                "<bbHIHHI", 0x04, 0x17, 0xC, 0x0, ordinal, param_offset, param_flag
-            )  # Index: always 0 (4B)
+            param_flag = (((param // 4) << 20) + 0x1F000 + 0x000
+                          )  # space (4bits) + logAlign (8bits); always 0
+            data += pack("<bbHIHHI", 0x04, 0x17, 0xC, 0x0, ordinal,
+                         param_offset, param_flag)  # Index: always 0 (4B)
 
         # EIATTR_MAXREG_COUNT (0x031b)
         data += pack("<bbH", 0x03, 0x1B, 0xFF)  # MAXREG_COUNT=0xff
@@ -322,7 +324,8 @@ class Cubin:
             # Taking alignment into consideration
             misalign_bytes = current_offset & (sec.sh_align - 1)
             if misalign_bytes != 0:
-                current_offset = (current_offset & ~(sec.sh_align - 1)) + sec.sh_align
+                current_offset = (current_offset
+                                  & ~(sec.sh_align - 1)) + sec.sh_align
                 prev_sec.data += b"\x00" * (sec.sh_align - misalign_bytes)
 
             sec.sh_offset = current_offset
@@ -410,7 +413,8 @@ class Cubin:
         self.GenerateText(kernel, _text_kernel, name)
         # Add .nv.shared.name
         if kernel["SmemSize"] > 0:
-            self.GenerateNvSmem(kernel, _nv_smem_kernel, name, kernel["SmemSize"])
+            self.GenerateNvSmem(kernel, _nv_smem_kernel, name,
+                                kernel["SmemSize"])
 
         ########################
         # Update shstrtab/strtab
@@ -432,19 +436,16 @@ class Cubin:
         self.p_hdr.offset = self.header.phoff
         if len(consts["name_list"]) > 0:
             self.p_progbits.offset = self.sections[
-                self.sec_idx_dict[b".nv.constant3"]
-            ].sh_offset
+                self.sec_idx_dict[b".nv.constant3"]].sh_offset
             self.p_progbits.filesz = (
-                self.sections[self.sec_idx_dict[b".nv.constant3"]].sh_size
-                + self.sections[self.sec_idx_dict[b".nv.constant0." + name]].sh_size
-            )
+                self.sections[self.sec_idx_dict[b".nv.constant3"]].sh_size +
+                self.sections[self.sec_idx_dict[b".nv.constant0." +
+                                                name]].sh_size)
         else:
-            self.p_progbits.offset = self.sections[
-                self.sec_idx_dict[b".nv.constant0." + name]
-            ].sh_offset
-            self.p_progbits.filesz = self.sections[
-                self.sec_idx_dict[b".nv.constant0." + name]
-            ].sh_size
+            self.p_progbits.offset = self.sections[self.sec_idx_dict[
+                b".nv.constant0." + name]].sh_offset
+            self.p_progbits.filesz = self.sections[self.sec_idx_dict[
+                b".nv.constant0." + name]].sh_size
 
         self.p_progbits.memsz = self.p_progbits.filesz
 

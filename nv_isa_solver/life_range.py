@@ -18,12 +18,11 @@ def _process_range_output(output):
 
     # Find function start postition in the output.
     start_index = next(
-        (i for i, line in enumerate(lines) if ".text.test" in line), None
-    )
+        (i for i, line in enumerate(lines) if ".text.test" in line), None)
     if start_index is None:
         return None
 
-    lines = lines[start_index + 1 :]
+    lines = lines[start_index + 1:]
 
     # Find table start
     index = next((i for i, line in enumerate(lines) if "//" in line), None)
@@ -38,19 +37,19 @@ def _process_range_output(output):
     col_lengths = [[len(num) for num in part] for part in parts]
     parts = [[int(num) for num in part] for part in parts]
     asm_start_index = next(
-        (i for i, line in enumerate(lines) if ".text.test:" in line), None
-    )
+        (i for i, line in enumerate(lines) if ".text.test:" in line), None)
 
     # Find register interactions
-    lines = lines[asm_start_index + 1 :]
+    lines = lines[asm_start_index + 1:]
     line = lines[0]
     reg_interaction_data = [
-        part[1:-1] for part in line[line.find("//") + 2 :].strip().split("|")[1:-1]
+        part[1:-1]
+        for part in line[line.find("//") + 2:].strip().split("|")[1:-1]
     ]
     reg_interactions = []
     for part, col_sizes in zip(reg_interaction_data, col_lengths):
         part = part.strip()
-        part = part[part.find(" ") :]
+        part = part[part.find(" "):]
         current = []
         reg_interactions.append(current)
         offset = 3
@@ -62,15 +61,16 @@ def _process_range_output(output):
                 p = part[offset]
             offset += 2
             current.append(p)
-    reg_interactions = [
-        [(reg, rintr) for reg, rintr in zip(regs[1:], intr) if rintr != " "]
-        for regs, intr in zip(parts, reg_interactions)
-    ]
+    reg_interactions = [[(reg, rintr) for reg, rintr in zip(regs[1:], intr)
+                         if rintr != " "]
+                        for regs, intr in zip(parts, reg_interactions)]
     reg_interactions = {
-        file: interactions for file, interactions in zip(reg_files, reg_interactions)
+        file: interactions
+        for file, interactions in zip(reg_files, reg_interactions)
     }
-    asm_end_index = next((i for i, line in enumerate(lines) if "//" not in line), None)
-    lines = lines[: asm_end_index - 1]
+    asm_end_index = next(
+        (i for i, line in enumerate(lines) if "//" not in line), None)
+    lines = lines[:asm_end_index - 1]
 
     chars = {
         ":": "USED",
@@ -104,11 +104,8 @@ def get_interaction_ranges(reg_interactions):
                 result[file].append((current, intr_type, length))
 
         for intr in interactions:
-            if (
-                current is not None
-                and current + length == intr[0]
-                and intr_type == intr[1]
-            ):
+            if (current is not None and current + length == intr[0]
+                    and intr_type == intr[1]):
                 length += 1
             else:
                 push()
@@ -120,9 +117,8 @@ def get_interaction_ranges(reg_interactions):
 
 
 def get_live_ranges(filename, nvdisasm="nvdisasm"):
-    proc = subprocess.run(
-        [nvdisasm, filename, "--print-life-ranges"], capture_output=True
-    )
+    proc = subprocess.run([nvdisasm, filename, "--print-life-ranges"],
+                          capture_output=True)
     error = proc.stderr.decode("ascii")
     if len(error) != 0:
         print("Nvdisasm error!", error)
@@ -146,7 +142,10 @@ def analyse_live_ranges(inst, archCode=90, nvdisasm="nvdisasm"):
     tmp = tempfile.NamedTemporaryFile(delete=False)
     tmp.close()
 
-    bin.add_kernel(kernel, b"test", {"name_list": [], "size_list": [0]}, const_dict)
+    bin.add_kernel(kernel, b"test", {
+        "name_list": [],
+        "size_list": [0]
+    }, const_dict)
 
     bin.Write(tmp.name)
 
