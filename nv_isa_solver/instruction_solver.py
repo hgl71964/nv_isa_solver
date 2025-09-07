@@ -429,10 +429,9 @@ def analyse_modifiers(original: List[str], mutated: List[str]):
 
 
 class InstructionMutationSet:
-    def __init__(self, inst, disasm: str, mutations, disassembler):
+    def __init__(self, inst, parsed_asm: Instruction, mutations, disassembler):
         self.inst = inst
-        self.disasm = disasm
-        self.parsed = InstructionParser.parseInstruction(self.disasm)
+        self.parsed = parsed_asm
         self.mutations = mutations
         self.disassembler = disassembler
 
@@ -1424,21 +1423,23 @@ def analysis_run_fixedpoint(
 def instruction_analysis_pipeline(inst, disassembler: Disassembler, arch_code):
     inst = disassembler.distill_instruction(inst)
     asm = disassembler.disassemble(inst)
+    parsed_inst = InstructionParser.parseInstruction(asm)
 
     mutations = disassembler.mutate_inst(inst, end=14 * 8 - 2)
-    mutation_set = InstructionMutationSet(inst, asm, mutations, disassembler)
-    parsed_inst = InstructionParser.parseInstruction(asm)
+    mutation_set = InstructionMutationSet(inst, parsed_inst, mutations, disassembler)
+
+    # run
     analysis_run_fixedpoint(disassembler, mutation_set, analysis_disambiguate_flags)
     analysis_operand_fix(disassembler, mutation_set)
     analysis_disambiguate_operand_flags(disassembler, mutation_set)
     analysis_run_fixedpoint(disassembler, mutation_set, analysis_extend_modifiers)
     # analysis_modifier_coalescing(disassembler, mutation_set)
     analysis_run_fixedpoint(disassembler, mutation_set, analysis_modifier_splitting)
+
     ranges = mutation_set.compute_encoding_ranges()
-
     modifier_values = ranges.enumerate_modifiers(disassembler)
-
     operand_modifier_values = ranges.enumerate_operand_modifiers(disassembler)
+
     spec = InstructionSpec(
         asm, parsed_inst, ranges, modifier_values, operand_modifier_values
     )
@@ -1516,9 +1517,8 @@ def main():
     analysis_result = {}
     while True:
         instructions = disassembler.find_uniques_from_cache()
-        instructions = list(instructions.items())
         instructions = [
-            (key, inst) for key, inst in instructions if key not in analysis_result
+            (key, inst) for key, inst in instructions.items() if key not in analysis_result
         ]
         if arguments.filter:
             instructions = [

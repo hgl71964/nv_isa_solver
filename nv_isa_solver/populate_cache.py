@@ -15,7 +15,7 @@ def main():
         bit_offset = i % 8
         array[i // 8] ^= 1 << bit_offset
 
-    # XXX how does the bit range determined?
+    # XXX it seems to assume the first 12 bits are the opcode
     inst = []
     for i in range(pow(2, 12)):
         array = bytearray(b"\0" * 16)   # 16-byte buffer (128 bits instruction length, all 0)
