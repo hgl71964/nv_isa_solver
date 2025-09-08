@@ -448,6 +448,25 @@ class InstructionMutationSet:
 
         self._analyse()
 
+    def __repr__(self):
+        # Collect all attributes ending with "_bits" or "_bit_flag"
+        attrs = {
+            name: getattr(self, name)
+            for name in dir(self) if not name.startswith("_") and (
+                name.endswith("_bits") or name.endswith("_bit_flag"))
+        }
+
+        # Format them nicely
+        parts = []
+        for key, value in attrs.items():
+            if isinstance(value, (set, dict)) and not value:
+                parts.append(f"{key}: {{}}")  # show empty nicely
+            else:
+                parts.append(f"{key}: {value}")
+
+        # Add header
+        return "<InstructionBits:\n  " + "\n  ".join(parts) + "\n>"
+
     def reset_modifier_groups(self):
         self.modifier_groups = {}
 
@@ -491,8 +510,10 @@ class InstructionMutationSet:
         parsed_operands = self.parsed.get_flat_operands()
         self.key = self.parsed.get_key()
         for i_bit, inst, asm in self.mutations:
-            # The disassembler refused to decode this instruction.
             asm = asm.strip()
+
+            # 1. figure out the bit range for opcode
+            # The disassembler refused to decode this instruction.
             if len(asm) == 0:
                 self.opcode_bits.add(i_bit)
                 continue
@@ -507,6 +528,8 @@ class InstructionMutationSet:
                 # NOTE: Should we only say this is a opcode bit if the base instruction is different.
                 self.opcode_bits.add(i_bit)
                 continue
+
+            # 2. predicate and operand bit range
 
             # FIXME: This won't be able to handle '[R1].asd'
             mutated_operands = mutated_parsed.get_flat_operands()
@@ -532,6 +555,8 @@ class InstructionMutationSet:
                         self.operand_modifier_bit_flag[i_bit] = flag
             if operand_effected:
                 continue
+
+            # 3. modifiers bit range
 
             # Don't look for modifiers in the opcode section.
             # we will consider it a different instruction anways.
@@ -1397,34 +1422,37 @@ class InstructionSpec:
         return html_result
 
 
-def analysis_run_fixedpoint(disassembler: Disassembler,
-                            mset: InstructionMutationSet, fn):
+def analysis_run_fixedpoint(
+    disassembler: Disassembler,
+    mset: InstructionMutationSet,
+    fn,
+):
     change = True
     while change:
         change = fn(disassembler, mset)
 
 
-def instruction_analysis_pipeline(inst, disassembler: Disassembler, arch_code):
+def instruction_analysis_pipeline(
+    inst: bytes,
+    disassembler: Disassembler,
+    arch_code,
+):
     inst = disassembler.distill_instruction(inst)
     asm = disassembler.disassemble(inst)
     parsed_inst = InstructionParser.parseInstruction(asm)
 
-    mutations = disassembler.mutate_inst(inst, end=14 * 8 - 2)
-    mutation_set = InstructionMutationSet(inst, parsed_inst, mutations,
-                                          disassembler)
+    mutations = disassembler.mutate_inst(inst, start=0, end=14 * 8 - 2)
+    mset = InstructionMutationSet(inst, parsed_inst, mutations, disassembler)
 
     # run
-    analysis_run_fixedpoint(disassembler, mutation_set,
-                            analysis_disambiguate_flags)
-    analysis_operand_fix(disassembler, mutation_set)
-    analysis_disambiguate_operand_flags(disassembler, mutation_set)
-    analysis_run_fixedpoint(disassembler, mutation_set,
-                            analysis_extend_modifiers)
-    # analysis_modifier_coalescing(disassembler, mutation_set)
-    analysis_run_fixedpoint(disassembler, mutation_set,
-                            analysis_modifier_splitting)
+    analysis_run_fixedpoint(disassembler, mset, analysis_disambiguate_flags)
+    analysis_operand_fix(disassembler, mset)
+    analysis_disambiguate_operand_flags(disassembler, mset)
+    analysis_run_fixedpoint(disassembler, mset, analysis_extend_modifiers)
+    # analysis_modifier_coalescing(disassembler, mset)
+    analysis_run_fixedpoint(disassembler, mset, analysis_modifier_splitting)
 
-    ranges = mutation_set.compute_encoding_ranges()
+    ranges = mset.compute_encoding_ranges()
     modifier_values = ranges.enumerate_modifiers(disassembler)
     operand_modifier_values = ranges.enumerate_operand_modifiers(disassembler)
 

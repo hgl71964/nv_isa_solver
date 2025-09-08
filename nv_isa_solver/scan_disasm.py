@@ -3,7 +3,7 @@ Scan a dissassembly file to add to the corpus.
 
 `cuobjdump --dump-sass --gpu-architecture sm_90 file`
 
-dump a library so for analysis:
+dump a library.so for analysis:
 `cuobjdump -sass -arch sm_100a /usr/local/cuda/lib64/libcublas.so
 """
 
@@ -42,7 +42,11 @@ def process_instruction(
         print("Couldn't parse: ", disasm, "skipping", instbytes)
         return False
 
-    # XXX assume first 12 bits are opcode?
+    # NOTE: assume first 12 bits are opcode?
+    # section 3.2.1 of Understanding the GPU Microarchitecture to Achieve Bare-Metal Performance Tuning
+    # we should probably dump a library.so and group the same opcode instructions
+    # then bit-flip to find the opcode length
+    #
     opcode = get_bit_range(instbytes, 0, 12)
     key = f"{opcode}.{parsed.get_key()}"
     if key not in original_instructions:
